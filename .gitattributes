@@ -1,0 +1,3 @@
+# LF en todo el repo: los scripts corren en la Pi (Linux)
+* text=auto eol=lf
+*.png binary

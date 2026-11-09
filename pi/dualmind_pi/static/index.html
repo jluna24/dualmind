@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DualMind</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #677085; --line: #e3e6ec;
+    --accent: #2f6fde; --temp: #e0662f; --hum: #2f8fde;
+    --ok: #1f9d55; --warn: #c98a00; --bad: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #949db0; --line: #2b3240;
+      --accent: #5b8ff0; --temp: #f08a5d; --hum: #5fb0f0;
+      --ok: #3cc27a; --warn: #e0a92a; --bad: #ef6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); margin: 0 0 10px; }
+  .muted { color: var(--muted); }
+  .grid { display: grid; gap: 14px; margin-top: 16px; }
+  .now { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .minds { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .big { font-size: 40px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .big small { font-size: 18px; font-weight: 500; color: var(--muted); }
+  .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--ok); }
+  .dot.stale { background: var(--bad); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 13px;
+          border: 1px solid var(--line); }
+  .pill.bajo, .pill.ok, .pill.ninguna { color: var(--ok); border-color: var(--ok); }
+  .pill.medio { color: var(--warn); border-color: var(--warn); }
+  .pill.alto { color: var(--bad); border-color: var(--bad); }
+  .reason { margin-top: 10px; font-size: 14px; }
+  .meta { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  button { font: inherit; font-weight: 600; background: var(--accent); color: #fff; border: 0;
+           border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .row h2 { margin: 0; }
+  .error { color: var(--bad); font-size: 13px; margin-top: 8px; }
+  .chart-wrap { position: relative; height: 260px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.match { color: var(--ok); } td.diff { color: var(--bad); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .cam { background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 16 / 9; }
+  .cam img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  button.off { background: var(--line); color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>DualMind · recámara</h1>
+    <span class="muted" id="status"><span class="dot"></span>cargando…</span>
+  </header>
+
+  <section class="grid now">
+    <div class="card"><h2>Temperatura</h2><div class="big" id="t">—</div><div class="sub" id="t-range"></div></div>
+    <div class="card"><h2>Humedad</h2><div class="big" id="h">—</div><div class="sub" id="h-range"></div></div>
+    <div class="card"><h2>Punto de rocío</h2><div class="big" id="dp">—</div><div class="sub" id="period"></div></div>
+  </section>
+
+  <section class="grid minds">
+    <div class="card">
+      <div class="row"><h2>Reglas · ESP32</h2><span class="muted" style="font-size:12px">cada minuto</span></div>
+      <dl id="rules"></dl>
+      <div class="reason" id="rules-reason"></div>
+    </div>
+    <div class="card">
+      <div class="row"><h2 id="llm-title">LLM</h2><button id="analyze">Analizar con LLM</button></div>
+      <dl id="llm"></dl>
+      <div class="reason" id="llm-reason"></div>
+      <div class="meta" id="llm-meta"></div>
+      <div class="error" id="llm-error"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <div class="row"><h2>Cámara · en vivo</h2><button id="cam-btn">Ver cámara</button></div>
+    <div class="cam" id="cam-box" hidden><img id="cam" alt="Cámara de la recámara en vivo"></div>
+    <div class="meta" id="cam-meta">Apagada. Solo se enciende mientras alguien la está viendo.</div>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <h2>Últimas 12 horas</h2>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <h2>Evaluaciones del LLM vs. reglas</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Hora</th><th>Origen</th><th>Confort</th><th>Moho</th><th>Acción</th><th>Razón del LLM</th></tr></thead>
+      <tbody id="evals"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmtTime = (ms) => new Date(ms).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+const n1 = (v) => (v == null ? "—" : Number(v).toFixed(1));
+const pill = (v) => `<span class="pill ${v}">${v ?? "—"}</span>`;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function decisionRows(d) {
+  if (!d) return "<dt>—</dt><dd>sin datos</dd>";
+  return `<dt>Confort</dt><dd>${pill(d.comfort)}</dd>
+          <dt>Moho</dt><dd>${pill(d.mold_risk)}</dd>
+          <dt>Acción</dt><dd>${pill(d.action)}</dd>`;
+}
+
+let cooldownUntil = 0;
+async function loadState() {
+  const s = await (await fetch("/api/state")).json();
+  const it = s.latest;
+  if (it) {
+    const age = (s.now - it.ts) / 1000;
+    const stale = age > 180;
+    $("status").innerHTML = `<span class="dot ${stale ? "stale" : ""}"></span>` +
+      `dato de las ${fmtTime(it.ts)} ${stale ? "· ESP32 sin reportar" : ""}`;
+    const t = it.readings.temp_c, h = it.readings.hum_pct;
+    $("t").innerHTML = `${n1(t.avg)}<small> °C</small>`;
+    $("t-range").textContent = `min ${n1(t.min)} · max ${n1(t.max)}`;
+    $("h").innerHTML = `${n1(h.avg)}<small> %</small>`;
+    $("h-range").textContent = `min ${n1(h.min)} · max ${n1(h.max)}`;
+    const r = it.rules;
+    $("dp").innerHTML = r && r.dew_point_c != null ? `${n1(r.dew_point_c)}<small> °C</small>` : "—";
+    $("period").textContent = r ? `periodo: ${r.period} · HR≥70 % por ${r.humid_min} min` : "";
+    $("rules").innerHTML = decisionRows(r);
+    $("rules-reason").textContent = r ? r.reason : "El firmware aún no envía reglas";
+  }
+  const l = s.last_llm && s.last_llm.llm;
+  $("llm-title").textContent = `LLM · ${s.model}`;
+  $("llm").innerHTML = decisionRows(l);
+  $("llm-reason").textContent = l ? l.reason : "Aún no hay evaluaciones";
+  $("llm-meta").textContent = l
+    ? `${fmtTime(l.evaluated_at)} · ${l.trigger === "manual" ? "manual" : "programado"} · ${l.latency_ms} ms · ${l.tokens_in}/${l.tokens_out} tokens` +
+      (s.next_scheduled ? ` · próximo ${fmtTime(s.next_scheduled)}` : "")
+    : (s.next_scheduled ? `próximo análisis programado ${fmtTime(s.next_scheduled)}` : "");
+  $("llm-error").textContent = s.last_error || "";
+  cooldownUntil = Math.max(cooldownUntil, Date.now() + s.cooldown_s * 1000);
+}
+
+let chart;
+async function loadHistory() {
+  const rows = await (await fetch("/api/history?hours=12")).json();
+  const labels = rows.map((r) => fmtTime(r.ts));
+  const data = [rows.map((r) => r.t), rows.map((r) => r.h)];
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets.forEach((ds, i) => (ds.data = data[i]));
+    chart.update("none");
+    return;
+  }
+  if (!window.Chart) return;
+  const css = getComputedStyle(document.documentElement);
+  const c = (v) => css.getPropertyValue(v).trim();
+  chart = new Chart($("chart"), {
+    type: "line",
+    data: { labels, datasets: [
+      { label: "Temperatura °C", data: data[0], borderColor: c("--temp"), yAxisID: "yT", pointRadius: 0, borderWidth: 2, tension: .25 },
+      { label: "Humedad %", data: data[1], borderColor: c("--hum"), yAxisID: "yH", pointRadius: 0, borderWidth: 2, tension: .25 },
+    ]},
+    options: {
+      maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { labels: { color: c("--muted"), boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: c("--muted"), maxTicksLimit: 8 }, grid: { color: c("--line") } },
+        yT: { position: "left", ticks: { color: c("--temp") }, grid: { color: c("--line") } },
+        yH: { position: "right", ticks: { color: c("--hum") }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+async function loadEvals() {
+  const rows = await (await fetch("/api/evaluations?limit=20")).json();
+  const cell = (r, l, f) => {
+    const a = r && r[f], b = l[f];
+    return `<td class="${a === b ? "match" : "diff"}">${esc(b)}${a === b ? "" : `<br><span class="muted">reglas: ${esc(a ?? "—")}</span>`}</td>`;
+  };
+  $("evals").innerHTML = rows.map((it) => {
+    const l = it.llm, r = it.rules;
+    return `<tr><td>${fmtTime(it.ts)}</td><td>${l.trigger === "manual" ? "manual" : "programado"}</td>` +
+      cell(r, l, "comfort") + cell(r, l, "mold_risk") + cell(r, l, "action") +
+      `<td>${esc(l.reason)}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="muted">Sin evaluaciones todavía</td></tr>`;
+}
+
+const btn = $("analyze");
+function tickButton() {
+  const left = Math.ceil((cooldownUntil - Date.now()) / 1000);
+  if (btn.dataset.busy) return;
+  btn.disabled = left > 0;
+  btn.textContent = left > 0 ? `Espera ${left} s` : "Analizar con LLM";
+}
+btn.addEventListener("click", async () => {
+  btn.dataset.busy = "1"; btn.disabled = true; btn.textContent = "Analizando…";
+  $("llm-error").textContent = "";
+  try {
+    const res = await fetch("/api/analyze", { method: "POST" });
+    if (!res.ok) $("llm-error").textContent = (await res.json()).detail || res.statusText;
+    cooldownUntil = Date.now() + 30000;
+  } catch (e) {
+    $("llm-error").textContent = String(e);
+  } finally {
+    delete btn.dataset.busy;
+    await Promise.all([loadState(), loadEvals()]);
+    tickButton();
+  }
+});
+
+// --- Cámara: el stream se abre solo con la tarjeta activa y la pestaña visible ---
+const cam = $("cam"), camBtn = $("cam-btn");
+let camOn = false, camRetry;
+function camConnect() {
+  clearTimeout(camRetry);
+  cam.src = camOn && !document.hidden ? `/api/camera.mjpg?t=${Date.now()}` : "";
+}
+function camSet(on) {
+  camOn = on;
+  $("cam-box").hidden = !on;
+  camBtn.textContent = on ? "Apagar" : "Ver cámara";
+  camBtn.classList.toggle("off", on);
+  $("cam-meta").textContent = on ? "Conectando…" : "Apagada. Solo se enciende mientras alguien la está viendo.";
+  camConnect();
+}
+cam.addEventListener("load", () => {
+  if (camOn) $("cam-meta").textContent = `En vivo · ${cam.naturalWidth}×${cam.naturalHeight}`;
+});
+cam.addEventListener("error", async () => {
+  if (!camOn || !cam.getAttribute("src")) return;
+  let msg = "sin señal";
+  try { msg = (await (await fetch("/api/camera/status")).json()).error || msg; } catch {}
+  $("cam-meta").textContent = `Cámara: ${msg} · reintentando…`;
+  camRetry = setTimeout(camConnect, 3000);
+});
+camBtn.addEventListener("click", () => camSet(!camOn));
+document.addEventListener("visibilitychange", camConnect);
+
+async function refreshAll() {
+  try { await Promise.all([loadState(), loadHistory(), loadEvals()]); }
+  catch (e) { $("status").innerHTML = `<span class="dot stale"></span>sin conexión con la Pi`; }
+}
+refreshAll();
+setInterval(refreshAll, 30000);
+setInterval(tickButton, 1000);
+</script>
+</body>
+</html>

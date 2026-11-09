@@ -1,0 +1,15 @@
+# Servicio de usuario (systemctl --user) con linger activado: arranca con la
+# Pi aunque nadie inicie sesión y no requiere sudo.
+[Unit]
+Description=DualMind - interfaz web y worker del LLM
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/dualmind
+EnvironmentFile=%h/dualmind/dualmind.env
+ExecStart=%h/dualmind/.venv/bin/uvicorn dualmind_pi.app:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

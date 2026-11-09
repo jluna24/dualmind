@@ -1,0 +1,2 @@
+# Copiar a terraform.tfvars y ajustar
+alert_email = "tu-correo@ejemplo.com"

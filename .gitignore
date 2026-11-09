@@ -1,0 +1,29 @@
+# Repo propio (github.com/jluna24/navidad-2027)
+navidad-2027/
+
+# Notas de trabajo con datos de la cuenta (se publicarán después, depuradas)
+/BITACORA.md
+/docs/pendientes.md
+
+# Configuración local con ID de cuenta (ver pi/dualmind.env.example)
+pi/dualmind.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Capturas sueltas en la raíz (no son documentación)
+/Screenshot *.png
+
+# Editores / SO
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Por si acaso: secretos y llaves en cualquier carpeta
+*.pem
+*.key
+*.pem.crt
+.env

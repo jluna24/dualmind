@@ -1,0 +1,5 @@
+.pio/
+.vscode/
+include/secrets.h
+include/aws_certs.h
+certs/
