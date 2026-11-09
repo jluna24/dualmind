@@ -171,6 +171,16 @@ def index():
     return FileResponse(STATIC / "index.html")
 
 
+ICONS = {"icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"}
+
+
+@app.get("/{name}")
+def icon(name: str):
+    if name not in ICONS:
+        raise HTTPException(404)
+    return FileResponse(STATIC / name, headers={"Cache-Control": "public, max-age=86400"})
+
+
 def _slim(it: dict) -> dict:
     return {k: it.get(k) for k in ("ts", "msg_id", "readings", "samples", "rules", "llm")}
 
