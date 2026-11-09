@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- DualMind: dos mentes, misma entrada.
+       Izquierda (naranja, temperatura) = reglas en el ESP32: circuito, ángulos rectos.
+       Derecha (azul, humedad) = LLM: curvas continuas, razonamiento. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f2531"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+    <linearGradient id="rules" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f08a5d"/>
+      <stop offset="1" stop-color="#d9572a"/>
+    </linearGradient>
+    <linearGradient id="llm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fb8f5"/>
+      <stop offset="1" stop-color="#2f6fde"/>
+    </linearGradient>
+    <clipPath id="clipL"><path d="M246 80 A176 176 0 0 0 246 432 Z"/></clipPath>
+    <clipPath id="clipR"><path d="M266 80 A176 176 0 0 1 266 432 Z"/></clipPath>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Mente de reglas -->
+  <path d="M246 80 A176 176 0 0 0 246 432 Z" fill="url(#rules)"/>
+  <g clip-path="url(#clipL)" fill="none" stroke="#12151b" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M250 160 H178 V128"/>
+    <path d="M250 256 H122"/>
+    <path d="M250 352 H178 V384"/>
+    <path d="M214 208 H150"/>
+    <path d="M214 304 H150"/>
+  </g>
+  <g fill="#12151b">
+    <circle cx="178" cy="124" r="15"/><circle cx="118" cy="256" r="15"/><circle cx="178" cy="388" r="15"/>
+    <circle cx="146" cy="208" r="11"/><circle cx="146" cy="304" r="11"/>
+  </g>
+  <g fill="#f08a5d">
+    <circle cx="178" cy="124" r="6"/><circle cx="118" cy="256" r="6"/><circle cx="178" cy="388" r="6"/>
+  </g>
+
+  <!-- Mente LLM -->
+  <path d="M266 80 A176 176 0 0 1 266 432 Z" fill="url(#llm)"/>
+  <g clip-path="url(#clipR)" fill="none" stroke="#12151b" stroke-width="11" stroke-linecap="round">
+    <path d="M262 168 C292 136 318 200 350 168 S408 136 440 168"/>
+    <path d="M262 256 C296 208 326 304 362 256 S428 208 460 256"/>
+    <path d="M262 344 C292 312 318 376 350 344 S408 312 440 344"/>
+  </g>
+</svg>
