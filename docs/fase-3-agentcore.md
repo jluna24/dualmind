@@ -1,6 +1,6 @@
 # DualMind — Fase 3: de Bedrock directo a AgentCore
 
-> Estado (2026-11-08): **Paso 1 implementado en código, falta `tofu apply`.** Pasos 2–4 en diseño.
+> Estado (2026-11-08): **Paso 1 en producción** — la Pi invoca a AgentCore desde las 17:20. Pasos 2–4 en diseño.
 > Contexto previo: Fase 2 — reglas en el ESP32 vs. LLM (Nova Micro vía Bedrock Converse) en un worker en la Pi. Ver `fase-2-reglas-vs-llm.md`.
 
 ---
@@ -34,7 +34,7 @@ Pi (cada 10 min o botón) ──InvokeAgentRuntime──► AgentCore Runtime "d
 | Paso | Qué | Estado |
 |---|---|---|
 | 0 | `prompt_v: 2`: definición de cada valor de `comfort`, `mold_risk` y `action` en el esquema de la herramienta | ✅ desplegado en la Pi |
-| 1 | Runtime con la misma lógica (lift & shift) | 🟡 código y `infra/agentcore.tf` listos; falta `apply` |
+| 1 | Runtime con la misma lógica (lift & shift) | ✅ aplicado y en uso por la Pi (`DUALMIND_ENGINE=agentcore`) |
 | 1b | Observability: *Transaction Search* + instrumentación OTEL (`aws-opentelemetry-distro`) | ⬜ |
 | 2 | Memory: decisiones como eventos + estrategia de resumen de largo plazo → `prompt_v: 3` | ⬜ |
 | 3 | Gateway + target OpenAPI de clima exterior (p. ej. Open-Meteo, sin llave) + Policy | ⬜ opcional |
@@ -93,6 +93,14 @@ En `pi/dualmind.env`: `DUALMIND_ENGINE=agentcore` y `DUALMIND_AGENT_RUNTIME_ARN=
 - Latencia total razonable. El primer arranque (*cold start*) con una sesión nueva por invocación es el costo esperado.
 
 ---
+
+### Resultado (2026-11-08)
+
+- `tofu apply`: 8 recursos nuevos, 1 cambio, sin errores. El Runtime quedó `READY` en 21 s, versión 1, sin el problema de propagación de IAM.
+- Primera invocación desde la CLI: **4.2 s en total**, con cold start de la microVM. Dentro del agente: 682 ms, de los cuales 503 ms son de Bedrock. Lo demás es arranque y la consulta a DynamoDB.
+- Desde la Pi: 3.5 s en total, 695 ms dentro del agente. El cold start se paga en cada invocación porque cada una abre una sesión nueva.
+- Logs en `/aws/bedrock-agentcore/runtimes/<runtime-id>-DEFAULT`. El agente usa el rol de ejecución (`Found credentials from IAM Role: execution_role`): no hay llaves.
+- Las decisiones quedan en DynamoDB con `engine: agentcore`.
 
 ## 4. Paso 2 — Memory (diseño)
 
